@@ -1,0 +1,82 @@
+import dotenv from 'dotenv';
+import express from 'express';
+import connection from './config/db.js';       // connexion MySQL
+import authRoutes from './routes/auth.route.js';
+import adminRoutes from './routes/admin.route.js';
+import categoryRoutes from './routes/category.route.js';
+import documentRoutes from './routes/document.route.js';
+import newRoutes from './routes/new.route.js';
+import commentRoutes from './routes/comment.route.js';
+import cors from 'cors'; // <- on ajoute cors ici
+
+
+// routes auth
+
+dotenv.config();
+
+const app = express();
+
+// Helper: allowed origins
+const allowedOrigins = [process.env.FRONT_URL, 'http://localhost:3000', 'http://localhost:4000'].filter(Boolean);
+
+const corsOptions = {
+    origin: function(origin, callback) {
+        // allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        // allow configured origins
+        if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+
+        // allow any http(s)://localhost:PORT origin
+        if (/^https?:\/\/localhost(?::\d+)?$/.test(origin)) return callback(null, true);
+
+        // otherwise block
+        callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type','Authorization']
+};
+
+// Middleware pour lire le JSON
+app.use(express.json());
+app.use(cors(corsOptions));
+
+// Servir les fichiers uploadés
+app.use('/uploads/images', express.static('uploads/images'));
+app.use('/uploads/files', express.static('uploads/files'));
+
+// Route test racine
+app.get('/', (req, res) => {
+    res.send('Bienvenue sur l’API de la plateforme juridique ⚖️');
+});
+
+// Routes d'authentification
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+// Alias pour compatibilité ascendante
+app.use('/api/admins', adminRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/news',newRoutes);
+app.use('/api/comments', commentRoutes);
+
+// Serves debug endpoint to inspect DB schema in development
+if (process.env.NODE_ENV !== 'production') {
+    app.get('/debug/schema/users', (req, res) => {
+        connection.query('SHOW CREATE TABLE users', (err, results) => {
+            if (err) {
+                console.error('[DEBUG] SHOW CREATE TABLE users error:', err);
+                return res.status(500).json({ message: 'Erreur SHOW CREATE TABLE users', error: err && (err.sqlMessage || err.message) });
+            }
+            // return the full results (array with Create Table text)
+            return res.status(200).json({ result: results });
+        });
+    });
+}
+
+// Lancement du serveur
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
+});
