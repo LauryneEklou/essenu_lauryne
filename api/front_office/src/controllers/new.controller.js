@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { Category } from '../models/category.model.js';
 import Users  from '../models/user.model.js';
+import NewsView from '../models/news_view.model.js';
+import jwt from 'jsonwebtoken';
 
 
 // javascript
@@ -27,9 +29,59 @@ export const getAllNews = async (req, res) => {
 // GET single news
 export const getNewsById = async (req, res) => {
     try {
+        console.debug('[getNewsById] called with id=', req.params.id);
+        // determine current user id from cookie or Authorization header (JWT)
+        let currentUserId = null;
+        try {
+            const token = (req.cookies && req.cookies.token) || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
+            console.debug('[getNewsById] token present?', !!token);
+            if (token) {
+                const payload = jwt.verify(token, process.env.JWT_SECRET);
+                currentUserId = payload && payload.id ? payload.id : null;
+                console.debug('[getNewsById] token payload id=', currentUserId);
+            }
+        } catch (e) {
+            // ignore token errors — treat as anonymous
+            console.debug('[getNewsById] token verify failed or absent', e && e.message);
+            currentUserId = null;
+        }
+
         const news = await News.findByPk(req.params.id);
         if (!news) return res.status(404).json({ message: "Actualité non trouvée" });
-        res.json(news);
+
+        // respond immediately so client can read the article even if view recording fails
+        try { res.json(news); } catch(e) { /* ignore send errors */ }
+
+        // If we have a logged-in user, record a view only if not already recorded (background, non-blocking)
+        if (currentUserId) {
+            (async () => {
+                const sequelizeInstance = News.sequelize;
+                try {
+                    await sequelizeInstance.transaction(async (t) => {
+                        const existing = await NewsView.findOne({ where: { news_id: news.id, user_id: currentUserId }, transaction: t });
+                        if (!existing) {
+                            try {
+                                await NewsView.create({ news_id: news.id, user_id: currentUserId }, { transaction: t });
+                                await news.increment('nb_vues', { by: 1, transaction: t });
+                                // no need to reload for background task
+                                console.debug('[getNewsById][bg] recorded view', { news_id: news.id, user_id: currentUserId });
+                            } catch (e) {
+                                // ignore duplicate key or other race conditions
+                                console.warn('[getNewsById][bg] create view failed', e && e.message);
+                            }
+                        } else {
+                            console.debug('[getNewsById][bg] view already recorded for', { news_id: news.id, user_id: currentUserId });
+                        }
+                    });
+                } catch (incErr) {
+                    console.warn('[getNewsById][bg] failed to record view', incErr && incErr.message);
+                }
+            })().catch(err => console.warn('[getNewsById][bg] unexpected error', err && err.message));
+            return;
+        }
+
+        // if no current user, we already returned the article above
+        return;
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Erreur serveur" });

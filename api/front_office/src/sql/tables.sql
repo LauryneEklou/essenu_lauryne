@@ -63,3 +63,13 @@ CREATE TABLE comments (
     CONSTRAINT fk_comments_parent FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE SET NULL
 );
 CREATE INDEX idx_comments_news ON comments(news_id, created_at DESC);
+
+CREATE TABLE news_views (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    news_id BIGINT NOT NULL,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_newsviews_news FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE,
+    CONSTRAINT fk_newsviews_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_news_user (news_id, user_id)
+);
