@@ -1,5 +1,4 @@
 import Comment from '../models/comment.model.js';
-import Users from '../models/user.model.js';
 
 export const listCommentsForNews = async (req, res) => {
     try {
@@ -13,7 +12,7 @@ export const listCommentsForNews = async (req, res) => {
 
         // use raw SQL to include author info
         const sql = `
-            SELECT c.*, CONCAT(IFNULL(u.first_name,''),' ',IFNULL(u.last_name,'')) AS author_name, u.id as author_id, u.first_name, u.last_name
+            SELECT c.*, CONCAT(IFNULL(u.first_name,''),' ',IFNULL(u.last_name,'')) AS author_name, u.id as author_id, u.first_name, u.last_name, u.role AS author_role
             FROM comments c
             JOIN users u ON c.user_id = u.id
             WHERE c.news_id = ? AND c.is_deleted = 0 AND c.parent_id IS NULL
@@ -28,7 +27,7 @@ export const listCommentsForNews = async (req, res) => {
         if (parentIds.length) {
             const placeholders = parentIds.map(() => '?').join(',');
             const sqlReplies = `
-                SELECT c.*, CONCAT(IFNULL(u.first_name,''),' ',IFNULL(u.last_name,'')) AS author_name, u.id as author_id, u.first_name, u.last_name
+                SELECT c.*, CONCAT(IFNULL(u.first_name,''),' ',IFNULL(u.last_name,'')) AS author_name, u.id as author_id, u.first_name, u.last_name, u.role AS author_role
                 FROM comments c
                 JOIN users u ON c.user_id = u.id
                 WHERE c.parent_id IN (${placeholders}) AND c.is_deleted = 0
