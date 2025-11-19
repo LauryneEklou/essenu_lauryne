@@ -7,6 +7,8 @@ import categoryRoutes from './routes/category.route.js';
 import documentRoutes from './routes/document.route.js';
 import newRoutes from './routes/new.route.js';
 import commentRoutes from './routes/comment.route.js';
+import serviceRoutes from './routes/service.route.js';
+import assistanceRoutes from './routes/assistance.route.js';
 import cors from 'cors'; // <- on ajoute cors ici
 
 
@@ -39,6 +41,7 @@ const corsOptions = {
 };
 
 // Middleware pour lire le JSON
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors(corsOptions));
 
@@ -60,6 +63,8 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/news',newRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/assistances', assistanceRoutes);
 
 // Serves debug endpoint to inspect DB schema in development
 if (process.env.NODE_ENV !== 'production') {

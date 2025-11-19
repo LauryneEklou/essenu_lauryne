@@ -10,6 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(express.json());
+
 app.use(cookieParser());
 
 // Enable CORS for front-end with credentials (adjust origin in production)
