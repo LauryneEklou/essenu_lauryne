@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import authRoutes from "./routes/auth.route.js";
 import connection from "./config/db.js";
 import adminRoutes from "./routes/admin.route.js";
+import userRoutes from "./routes/user.route.js";
+import documentRoutes from './routes/document.route.js';
 
 dotenv.config();
 const app = express();
@@ -20,5 +22,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 // Alias pour compatibilité ascendante : certains bundles front utilisent encore /api/admins
 app.use("/api/admins", adminRoutes);
+// Users (visitors) endpoints
+app.use('/api/users', userRoutes);
+
+// Documents routes (includes stats & stream)
+app.use('/api/documents', documentRoutes);
 
 export default app;

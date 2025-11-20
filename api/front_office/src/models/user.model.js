@@ -27,6 +27,12 @@ export const getAllAdmins = (callback) => {
     connection.query(sql, callback);
 };
 
+// Récupérer les utilisateurs par role
+export const getUsersByRole = (role, callback) => {
+    const sql = "SELECT id, first_name, last_name, email, role, status, created_at FROM users WHERE role = ? ORDER BY id DESC";
+    connection.query(sql, [role], callback);
+};
+
 // Créer un nouvel administrateur
 export const createAdmin = (adminData, callback) => {
     // Check if email already exists to return a friendly error
@@ -49,6 +55,18 @@ export const createAdmin = (adminData, callback) => {
 export const toggleAdminStatus = (id, status, callback) => {
     const sql = "UPDATE users SET status = ? WHERE id = ?";
     connection.query(sql, [status, id], callback);
+};
+
+// Changer le statut d’un utilisateur (générique)
+export const toggleUserStatusById = (id, status, callback) => {
+    const sql = "UPDATE users SET status = ? WHERE id = ?";
+    connection.query(sql, [status, id], callback);
+};
+
+// Récupérer un utilisateur par id (déjà fourni but ensure consistent signature)
+export const getUserById = (id, callback) => {
+    const sql = "SELECT id, first_name, last_name, email, role, status, created_at FROM users WHERE id = ? LIMIT 1";
+    connection.query(sql, [id], callback);
 };
 
 // Supprimer un administrateur
@@ -76,6 +94,7 @@ const Users = {
     findUserByEmail,
     findUserById,
     getAllAdmins,
+    getUsersByRole,
     createAdmin,
     toggleAdminStatus,
     deleteAdmin,

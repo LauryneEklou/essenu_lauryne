@@ -4,6 +4,10 @@ import path from 'path';
 import fs from 'fs/promises';
 import Category from '../models/category.model.js';
 import connection from '../config/db.js';
+import { EventEmitter } from 'events';
+
+// event emitter for SSE updates
+const documentsEmitter = new EventEmitter();
 
 const getUploaded = (req, field) => {
     if (!req) return null;
@@ -70,6 +74,8 @@ export const createDocument = async (req, res) => {
         console.log('[createDocument] docPayload.user_id =', docPayload.user_id);
 
         const document = await Document.create(docPayload);
+        // Emit event for SSE
+        documentsEmitter.emit('documents_change');
         return res.status(201).json({ message: 'Document créé avec succès', document });
     } catch (error) {
         console.error('createDocument error:', error);
@@ -217,6 +223,9 @@ export const updateDocument = async (req, res) => {
         const [affected] = await Document.update(updates, { where: { id } });
         if (!affected) return res.status(404).json({ message: 'Document introuvable' });
 
+        // Emit event for SSE
+        documentsEmitter.emit('documents_change');
+
         return res.status(200).json({ message: 'Document mis à jour avec succès' });
     } catch (error) {
         console.error('updateDocument error:', error);
@@ -273,6 +282,9 @@ export const deleteDocument = async (req, res) => {
         const deleted = await Document.destroy({ where: { id } });
         if (!deleted) return res.status(404).json({ message: 'Document introuvable' });
 
+        // Emit event for SSE
+        documentsEmitter.emit('documents_change');
+
         return res.status(200).json({ message: 'Document supprimé avec succès' });
     } catch (error) {
         console.error('deleteDocument error:', error);
@@ -291,6 +303,9 @@ export const downloadDocument = async (req, res) => {
 
         // Increment the download counter safely
         await doc.increment('nb_download', { by: 1 });
+
+        // Emit event for SSE so dashboards update
+        try { documentsEmitter.emit('documents_change'); } catch(e) { console.warn('SSE emit error', e); }
 
         const fileUrl = doc.file_url;
         if (!fileUrl) return res.status(404).json({ message: 'Aucun fichier associé au document' });
@@ -315,4 +330,87 @@ export const downloadDocument = async (req, res) => {
         console.error('downloadDocument error:', error);
         return res.status(500).json({ message: 'Erreur lors du téléchargement' });
     }
+};
+
+export const getCategoriesStats = (req, res) => {
+    const sql = `SELECT c.name AS label, COUNT(d.id) AS value
+                 FROM categories c
+                 LEFT JOIN documents d ON d.category_id = c.id
+                 GROUP BY c.id
+                 ORDER BY value DESC`;
+    connection.query(sql, (err, results) => {
+        if (err) {
+            console.error('getCategoriesStats error:', err);
+            return res.status(500).json({ message: 'Erreur serveur' });
+        }
+        return res.status(200).json(results.map(r => ({ label: r.label, value: r.value })));
+    });
+};
+
+export const getTopDownloads = (req, res) => {
+    const limit = parseInt(req.query.limit, 10) || 8;
+    const sql = `SELECT d.title AS label, COALESCE(d.nb_download,0) AS downloads
+                 FROM documents d
+                 ORDER BY downloads DESC
+                 LIMIT ?`;
+    connection.query(sql, [limit], (err, results) => {
+        if (err) {
+            console.error('getTopDownloads error:', err);
+            return res.status(500).json({ message: 'Erreur serveur' });
+        }
+        return res.status(200).json(results.map(r => ({ label: r.label, downloads: r.downloads })));
+    });
+};
+
+export const streamDocuments = (req, res) => {
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders && res.flushHeaders();
+
+    // helper to send event
+    const send = async (data) => {
+        try {
+            res.write(`event: documents_update\n`);
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch (e) {
+            console.error('SSE send error', e);
+        }
+    };
+
+    // send initial payload (counts)
+    (async () => {
+        try {
+            const cats = await new Promise((resolve) => {
+                const sql = `SELECT c.name AS label, COUNT(d.id) AS value FROM categories c LEFT JOIN documents d ON d.category_id = c.id GROUP BY c.id ORDER BY value DESC`;
+                connection.query(sql, (err, results) => {
+                    if (err) return resolve([]);
+                    return resolve(results.map(r => ({ label: r.label, value: r.value })));
+                });
+            });
+            const tops = await new Promise((resolve) => {
+                const sql = `SELECT d.title AS label, COALESCE(d.nb_download,0) AS downloads FROM documents d ORDER BY downloads DESC LIMIT 8`;
+                connection.query(sql, (err, results) => {
+                    if (err) return resolve([]);
+                    return resolve(results.map(r => ({ label: r.label, downloads: r.downloads })));
+                });
+            });
+            send({ categories: cats, top_downloads: tops });
+        } catch (e) {
+            // ignore
+        }
+    })();
+
+    const onChange = () => {
+        // send a lightweight event, client will re-fetch the data
+        send({ changed: true, ts: Date.now() });
+    };
+
+    documentsEmitter.on('documents_change', onChange);
+
+    // cleanup on client close
+    req.on('close', () => {
+        documentsEmitter.removeListener('documents_change', onChange);
+    });
 };

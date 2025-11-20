@@ -9,7 +9,9 @@ import newRoutes from './routes/new.route.js';
 import commentRoutes from './routes/comment.route.js';
 import serviceRoutes from './routes/service.route.js';
 import assistanceRoutes from './routes/assistance.route.js';
+import userRoutes from './routes/user.route.js';
 import cors from 'cors'; // <- on ajoute cors ici
+import * as dashboardController from './controllers/dashboard.controller.js';
 
 
 // routes auth
@@ -17,6 +19,13 @@ import cors from 'cors'; // <- on ajoute cors ici
 dotenv.config();
 
 const app = express();
+
+// set a friendly CSP for development so inline styles and local assets are allowed
+app.use((req, res, next) => {
+    // allow styles/scripts from self and localhost dev ports and permit inline styles for now
+    res.setHeader('Content-Security-Policy', "default-src 'self' http://localhost:3000 http://localhost:4000 http://localhost:5000; script-src 'self' 'unsafe-inline' http://localhost:3000 http://localhost:4000 http://localhost:5000; style-src 'self' 'unsafe-inline' http://localhost:3000 http://localhost:4000 http://localhost:5000; connect-src 'self' http://localhost:3000 http://localhost:4000 http://localhost:5000; img-src 'self' data:;");
+    next();
+});
 
 // Helper: allowed origins
 const allowedOrigins = [process.env.FRONT_URL, 'http://localhost:3000', 'http://localhost:4000'].filter(Boolean);
@@ -54,6 +63,11 @@ app.get('/', (req, res) => {
     res.send('Bienvenue sur l’API de la plateforme juridique ⚖️');
 });
 
+// Quick test endpoint
+app.get('/api/users_test', (req, res) => {
+    res.json({ ok: true, msg: 'users_test endpoint reachable' });
+});
+
 // Routes d'authentification
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -65,6 +79,13 @@ app.use('/api/news',newRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/assistances', assistanceRoutes);
+// users endpoints
+app.use('/api/users', userRoutes);
+
+// Dashboard stats endpoint
+app.get('/api/dashboard/stats', dashboardController.getDashboardStats);
+app.get('/api/dashboard/top_authors', dashboardController.getTopAuthors);
+app.get('/api/dashboard/top_news_comments', dashboardController.getTopNewsByComments);
 
 // Serves debug endpoint to inspect DB schema in development
 if (process.env.NODE_ENV !== 'production') {

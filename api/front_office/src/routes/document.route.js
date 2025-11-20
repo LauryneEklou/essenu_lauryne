@@ -7,7 +7,10 @@ import {
     getDocumentById,
     updateDocument,
     deleteDocument,
-    downloadDocument
+    downloadDocument,
+    getCategoriesStats,
+    getTopDownloads,
+    streamDocuments
 } from '../controllers/document.controller.js';
 
 import { upload } from '../middlewares/upload.js';
@@ -21,6 +24,13 @@ router.post('/',verifyToken,checkRole(['super_admin', 'admin_contenu']),upload.f
 ]), createDocument);
 
 router.get('/', getAllDocuments);
+
+// statistics endpoints (declare before param routes to avoid conflicts)
+router.get('/stats/categories', getCategoriesStats);
+router.get('/stats/top_downloads', getTopDownloads);
+
+// SSE stream for real-time updates
+router.get('/stream', streamDocuments);
 
 // download route must be declared before router.get('/:id') to avoid param conflicts
 router.get('/:id/download', downloadDocument);
