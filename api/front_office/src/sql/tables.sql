@@ -58,6 +58,20 @@ SHOW COLUMNS FROM documents LIKE 'nb_page';
         CONSTRAINT fk_news_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
         CONSTRAINT fk_news_user FOREIGN KEY (published_by) REFERENCES users(id) ON DELETE SET NULL );
 
+    -- Newsletter subscribers table
+    CREATE TABLE IF NOT EXISTS newsletters (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+    -- Newsletter subscribers table (consistent name used by API)
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
     CREATE TABLE comments (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         news_id BIGINT NOT NULL,

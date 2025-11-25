@@ -12,6 +12,7 @@ import assistanceRoutes from './routes/assistance.route.js';
 import userRoutes from './routes/user.route.js';
 import cors from 'cors'; // <- on ajoute cors ici
 import * as dashboardController from './controllers/dashboard.controller.js';
+import newsletterRoute from './routes/newsletter.route.js';
 
 
 // routes auth
@@ -81,6 +82,9 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/assistances', assistanceRoutes);
 // users endpoints
 app.use('/api/users', userRoutes);
+
+// Newsletter subscription route
+app.use('/api/newsletter', newsletterRoute);
 
 // Dashboard stats endpoint
 app.get('/api/dashboard/stats', dashboardController.getDashboardStats);
