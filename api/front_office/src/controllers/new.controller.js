@@ -5,6 +5,8 @@ import { Category } from '../models/category.model.js';
 import Users  from '../models/user.model.js';
 import NewsView from '../models/news_view.model.js';
 import jwt from 'jsonwebtoken';
+import db from '../config/db.js';
+import { sendMail } from '../services/mailer.service.js';
 
 
 // javascript
@@ -211,6 +213,75 @@ export const createNews = async (req, res) => {
         });
 
         res.status(201).json(newNews);
+
+        // --- Async: notify newsletter subscribers ---
+        (async () => {
+            try {
+                // fetch subscribers
+                db.query('SELECT email FROM newsletter_subscribers', async (err, results) => {
+                    if (err) {
+                        console.warn('[notifySubscribers] could not fetch newsletter_subscribers', err && err.message);
+                        return;
+                    }
+
+                    if (!Array.isArray(results) || results.length === 0) {
+                        console.info('[notifySubscribers] no subscribers to notify');
+                        return;
+                    }
+
+                    const emails = results.map(r => (r && r.email) ? String(r.email).trim() : '').filter(Boolean);
+                    if (emails.length === 0) {
+                        console.info('[notifySubscribers] no valid subscriber emails');
+                        return;
+                    }
+
+                    // Build email content
+                    const frontUrl = process.env.FRONT_URL || 'http://localhost:4000';
+                    const logoUrl = `${frontUrl.replace(/\/$/, '')}/assets/public/media/images/logo/essenu.png`;
+                    const newsUrl = `${frontUrl.replace(/\/$/, '')}/news/${newNews.id}`;
+
+                    const subject = `Du nouveau sur ESSENU — ${title}`;
+
+                    const html = `
+                        <div style="font-family: Arial, sans-serif; color: #222; line-height:1.4;">
+                            <div style="max-width:600px;margin:0 auto;padding:20px;border:1px solid #f0f0f0;border-radius:6px;">
+                                <div style="text-align:center;margin-bottom:16px;">
+                                    <img src="${logoUrl}" alt="ESSENU" style="height:48px;object-fit:contain;" />
+                                </div>
+                                <h2 style="color:#0b5394;margin-top:0;">${escapeHtml(title)}</h2>
+                                <div style="color:#333;margin-bottom:18px;">${description ? description : ''}</div>
+                                <div style="text-align:center;margin:24px 0;">
+                                    <a href="${newsUrl}" style="background:#0b5394;color:#fff;padding:12px 20px;border-radius:4px;text-decoration:none;display:inline-block;">Voir l\'article</a>
+                                </div>
+                                <p style="font-size:12px;color:#666;">Vous recevez cet email car vous êtes abonné·e à la newsletter ESSENU. Pour ne plus recevoir ces messages, répondez à cet email ou gérez vos préférences sur notre site.</p>
+                            </div>
+                        </div>
+                    `;
+
+                    const text = `Du nouveau sur ESSENU - ${title}\n\n${stripHtml(description || '')}\n\nVoir: ${newsUrl}`;
+
+                    // Send in BCC batches to avoid hitting provider limits
+                    const batchSize = parseInt(process.env.MAIL_BCC_BATCH_SIZE || '100', 10) || 100;
+                    for (let i = 0; i < emails.length; i += batchSize) {
+                        const chunk = emails.slice(i, i + batchSize);
+                        try {
+                            const result = await sendMail({ bcc: chunk.join(','), subject, html, text });
+                            if (result && result.success) {
+                                console.info(`[notifySubscribers] batch ${Math.floor(i/batchSize)+1} sent, recipients=${chunk.length}`);
+                            } else {
+                                console.warn('[notifySubscribers] sendMail failed for batch', { err: result && result.error });
+                            }
+                        } catch (sendErr) {
+                            console.error('[notifySubscribers] unexpected send error', sendErr && sendErr.message);
+                        }
+                    }
+                });
+            } catch (outerErr) {
+                console.error('[notifySubscribers] unexpected error', outerErr && outerErr.message);
+            }
+        })().catch(e => console.error('[notifySubscribers] top-level error', e && e.message));
+
+        return;
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Erreur serveur" });
@@ -262,3 +333,19 @@ export const deleteNews = async (req, res) => {
         res.status(500).json({ error: "Erreur serveur" });
     }
 };
+
+// helpers (inserted near bottom of file)
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function stripHtml(html) {
+    if (!html) return '';
+    return String(html).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}

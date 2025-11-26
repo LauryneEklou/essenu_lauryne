@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import Category from '../models/category.model.js';
 import connection from '../config/db.js';
 import { EventEmitter } from 'events';
+import { sendMail } from '../services/mailer.service.js';
 
 // event emitter for SSE updates
 const documentsEmitter = new EventEmitter();
@@ -76,7 +77,75 @@ export const createDocument = async (req, res) => {
         const document = await Document.create(docPayload);
         // Emit event for SSE
         documentsEmitter.emit('documents_change');
-        return res.status(201).json({ message: 'Document créé avec succès', document });
+
+        // Respond to client immediately
+        res.status(201).json({ message: 'Document créé avec succès', document });
+
+        // Async: notify newsletter subscribers about new document
+        (async () => {
+            try {
+                connection.query('SELECT email FROM newsletter_subscribers', async (err, results) => {
+                    if (err) {
+                        console.warn('[notifyDocumentSubscribers] could not fetch subscribers', err && err.message);
+                        return;
+                    }
+
+                    if (!Array.isArray(results) || results.length === 0) {
+                        console.info('[notifyDocumentSubscribers] no subscribers to notify');
+                        return;
+                    }
+
+                    const emails = results.map(r => (r && r.email) ? String(r.email).trim() : '').filter(Boolean);
+                    if (emails.length === 0) {
+                        console.info('[notifyDocumentSubscribers] no valid subscriber emails');
+                        return;
+                    }
+
+                    const frontUrl = process.env.FRONT_URL || 'http://localhost:4000';
+                    const logoUrl = `${frontUrl.replace(/\/$/, '')}/assets/public/media/images/logo/essenu.png`;
+                    // Prefer linking to documents listing; if you have per-document pages, adjust accordingly
+                    const docUrl = `${frontUrl.replace(/\/$/, '')}/fr/documents-pratiques`;
+
+                    const subject = `Nouveau document sur ESSENU — ${document.title}`;
+                    const html = `
+                        <div style="font-family: Arial, sans-serif; color: #222; line-height:1.4;">
+                            <div style="max-width:600px;margin:0 auto;padding:20px;border:1px solid #f0f0f0;border-radius:6px;">
+                                <div style="text-align:center;margin-bottom:16px;">
+                                    <img src="${logoUrl}" alt="ESSENU" style="height:48px;object-fit:contain;" />
+                                </div>
+                                <h2 style="color:#0b5394;margin-top:0;">${escapeHtml(document.title)}</h2>
+                                <div style="color:#333;margin-bottom:18px;">${document.description ? document.description : ''}</div>
+                                <div style="text-align:center;margin:24px 0;">
+                                    <a href="${docUrl}" style="background:#0b5394;color:#fff;padding:12px 20px;border-radius:4px;text-decoration:none;display:inline-block;">Voir le document</a>
+                                </div>
+                                <p style="font-size:12px;color:#666;">Vous recevez cet email car vous êtes abonné·e à la newsletter ESSENU. Pour ne plus recevoir ces messages, répondez à cet email ou gérez vos préférences sur notre site.</p>
+                            </div>
+                        </div>
+                    `;
+
+                    const text = `Nouveau document sur ESSENU - ${document.title}\n\n${stripHtml(document.description || '')}\n\nVoir: ${docUrl}`;
+
+                    const batchSize = parseInt(process.env.MAIL_BCC_BATCH_SIZE || '100', 10) || 100;
+                    for (let i = 0; i < emails.length; i += batchSize) {
+                        const chunk = emails.slice(i, i + batchSize);
+                        try {
+                            const result = await sendMail({ bcc: chunk.join(','), subject, html, text });
+                            if (result && result.success) {
+                                console.info(`[notifyDocumentSubscribers] batch ${Math.floor(i/batchSize)+1} sent, recipients=${chunk.length}`);
+                            } else {
+                                console.warn('[notifyDocumentSubscribers] sendMail failed for batch', { err: result && result.error });
+                            }
+                        } catch (sendErr) {
+                            console.error('[notifyDocumentSubscribers] unexpected send error', sendErr && sendErr.message);
+                        }
+                    }
+                });
+            } catch (outerErr) {
+                console.error('[notifyDocumentSubscribers] unexpected error', outerErr && outerErr.message);
+            }
+        })().catch(e => console.error('[notifyDocumentSubscribers] top-level error', e && e.message));
+
+        return;
     } catch (error) {
         console.error('createDocument error:', error);
         return res.status(500).json({ message: 'Erreur lors de la création du document' });
@@ -414,3 +483,19 @@ export const streamDocuments = (req, res) => {
         documentsEmitter.removeListener('documents_change', onChange);
     });
 };
+
+// helpers (reused here)
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function stripHtml(html) {
+    if (!html) return '';
+    return String(html).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}

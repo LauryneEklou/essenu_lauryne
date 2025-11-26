@@ -59,11 +59,14 @@ SHOW COLUMNS FROM documents LIKE 'nb_page';
         CONSTRAINT fk_news_user FOREIGN KEY (published_by) REFERENCES users(id) ON DELETE SET NULL );
 
     -- Newsletter subscribers table
-    CREATE TABLE IF NOT EXISTS newsletters (
+
+    CREATE TABLE newsletter_subcribers (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) NOT NULL UNIQUE,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    );
+
+ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
     -- Newsletter subscribers table (consistent name used by API)
     CREATE TABLE IF NOT EXISTS newsletter_subscribers (

@@ -66,3 +66,36 @@ export const subscribe = (req, res) => {
         return res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };
+
+// New: unsubscribe handler
+export const unsubscribe = (req, res) => {
+    try {
+        const { email } = req.body || {};
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ success: false, message: 'Email requis' });
+        }
+        const emailTrim = email.trim().toLowerCase();
+
+        // Debug log to ensure request reaches the controller
+        console.log('[newsletter] unsubscribe request received for:', emailTrim);
+
+        const tableName = 'newsletter_subscribers';
+        const deleteQuery = `DELETE FROM ${tableName} WHERE email = ?`;
+
+        db.query(deleteQuery, [emailTrim], (err, result) => {
+            if (err) {
+                console.error('Newsletter unsubscribe error', err);
+                return res.status(500).json({ success: false, message: 'Erreur serveur' });
+            }
+            // result.affectedRows tells us if something was deleted
+            if (result && result.affectedRows && result.affectedRows > 0) {
+                return res.json({ success: true, message: 'Désabonnement effectué.' });
+            } else {
+                return res.status(404).json({ success: false, message: 'Email non trouvé.' });
+            }
+        });
+    } catch (err) {
+        console.error('unsubscribe controller error', err);
+        return res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+};
