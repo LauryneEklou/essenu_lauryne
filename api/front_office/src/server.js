@@ -13,6 +13,7 @@ import userRoutes from './routes/user.route.js';
 import cors from 'cors'; // <- on ajoute cors ici
 import * as dashboardController from './controllers/dashboard.controller.js';
 import newsletterRoute from './routes/newsletter.route.js';
+import newsViewsRoute from './routes/newsViews.route.js';
 
 
 // routes auth
@@ -80,6 +81,8 @@ app.use('/api/news',newRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/assistances', assistanceRoutes);
+// news views (enregistrement des vues d'articles)
+app.use('/api/news_views', newsViewsRoute);
 // users endpoints
 app.use('/api/users', userRoutes);
 
@@ -90,6 +93,7 @@ app.use('/api/newsletter', newsletterRoute);
 app.get('/api/dashboard/stats', dashboardController.getDashboardStats);
 app.get('/api/dashboard/top_authors', dashboardController.getTopAuthors);
 app.get('/api/dashboard/top_news_comments', dashboardController.getTopNewsByComments);
+app.get('/api/dashboard/top_news_views', dashboardController.getTopNewsByViews);
 
 // Serves debug endpoint to inspect DB schema in development
 if (process.env.NODE_ENV !== 'production') {

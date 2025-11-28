@@ -99,3 +99,41 @@ export const unsubscribe = (req, res) => {
         return res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };
+
+// New: return list of subscribers (optionally with limit)
+export const listSubscribers = (req, res) => {
+    try {
+        const tableName = 'newsletter_subscribers';
+        const limit = parseInt(req.query.limit, 10) || 1000;
+        const q = `SELECT id, email, created_at FROM ${tableName} ORDER BY created_at DESC LIMIT ?`;
+        db.query(q, [limit], (err, rows) => {
+            if (err) {
+                console.error('listSubscribers error', err);
+                return res.status(500).json({ success: false, message: 'Erreur serveur' });
+            }
+            return res.json(rows || []);
+        });
+    } catch (e) {
+        console.error('listSubscribers controller error', e);
+        return res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+};
+
+// New: return count of subscribers
+export const countSubscribers = (req, res) => {
+    try {
+        const tableName = 'newsletter_subscribers';
+        const q = `SELECT COUNT(*) AS count FROM ${tableName}`;
+        db.query(q, [], (err, rows) => {
+            if (err) {
+                console.error('countSubscribers error', err);
+                return res.status(500).json({ success: false, message: 'Erreur serveur' });
+            }
+            const cnt = (rows && rows[0] && (rows[0].count || rows[0]['COUNT(*)'])) ? (rows[0].count || rows[0]['COUNT(*)']) : 0;
+            return res.json({ count: Number(cnt) });
+        });
+    } catch (e) {
+        console.error('countSubscribers controller error', e);
+        return res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+};

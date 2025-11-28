@@ -73,3 +73,22 @@ export const getTopNewsByComments = (req, res) => {
         return res.status(200).json(results.map(r => ({ id: r.id, label: r.label, value: r.comments })));
     });
 };
+
+// Top news by views - uses cached nb_vues column if present, otherwise falls back to counting news_views
+export const getTopNewsByViews = (req, res) => {
+    const limit = parseInt(req.query.limit, 10) || 6;
+    // prefer nb_vues column if exists
+    const sql = `
+        SELECT n.id, n.title AS label, COALESCE(n.nb_vues, 0) AS views
+        FROM news n
+        ORDER BY views DESC
+        LIMIT ?
+    `;
+    connection.query(sql, [limit], (err, results) => {
+        if (err) {
+            console.error('getTopNewsByViews error', err);
+            return res.status(500).json({ message: 'Erreur serveur' });
+        }
+        return res.status(200).json(results.map(r => ({ id: r.id, label: r.label, value: r.views })));
+    });
+};
