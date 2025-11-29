@@ -13,10 +13,10 @@ export async function recordView(req, res) {
     const user_id = Number(user.id);
 
     const sqlAuth = 'INSERT IGNORE INTO news_views (news_id, user_id, created_at) VALUES (?, ?, NOW())';
-    return connection.query(sqlAuth, [news_id, user_id], (err, result) => {
+    connection.query(sqlAuth, [news_id, user_id], (err, result) => {
       if (err) {
         console.error('newsViews insert error (auth)', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return res.status(500).json({ message: 'Erreur serveur lors de l\'enregistrement de la vue' });
       }
       const created = (result && result.affectedRows && result.affectedRows > 0) ? true : false;
       if (created) {
@@ -24,8 +24,10 @@ export async function recordView(req, res) {
         connection.query('UPDATE news SET nb_vues = COALESCE(nb_vues,0) + 1 WHERE id = ?', [news_id], (uErr) => {
           if (uErr) console.error('failed to increment news.nb_vues', uErr);
         });
+        return res.status(201).json({ message: 'Vue enregistrée', created: true });
       }
-      return res.status(201).json({ message: 'Vue enregistrée', created });
+      // already existed
+      return res.status(200).json({ message: 'Vue déjà enregistrée', created: false });
     });
 
   } catch (err) {

@@ -30,7 +30,7 @@ export function verifyToken(req, res, next) {
             // If request expects JSON, return JSON error, otherwise redirect to auth page
             const acceptsJSON = req.headers && req.headers.accept && req.headers.accept.includes('application/json');
             console.warn('[verifyToken] token missing for request', { path: req.originalUrl, headers: { accept: req.headers.accept } });
-            if (acceptsJSON) return res.status(401).json({ message: 'Token manquant' });
+            if (acceptsJSON) return res.status(401).json({ message: 'Veuillez vous connecter pour accéder à cette fonctionnalité' });
             return res.redirect(`/${req.lang || env.default_language}/auth`);
         }
 
@@ -43,7 +43,7 @@ export function verifyToken(req, res, next) {
     } catch (err) {
         console.error('Auth verify failed:', err && err.message);
         const acceptsJSON = req.headers && req.headers.accept && req.headers.accept.includes('application/json');
-        if (acceptsJSON) return res.status(403).json({ message: 'Token invalide ou expiré' });
+        if (acceptsJSON) return res.status(403).json({ message: 'Jeton invalide ou expiré, veuillez vous reconnecter' });
         return res.redirect(`/${req.lang || env.default_language}/auth`);
     }
 }
