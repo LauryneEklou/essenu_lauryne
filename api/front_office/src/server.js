@@ -47,9 +47,15 @@ const corsOptions = {
         callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+    // ajouter PATCH pour permettre les mises à jour via fetch(..., { method: 'PATCH' })
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
     allowedHeaders: ['Content-Type','Authorization']
 };
+
+// In development, relax CORS to ease debugging (allow all origins). Remove/adjust in production.
+if (process.env.NODE_ENV !== 'production') {
+    corsOptions.origin = true; // allow any origin
+}
 
 // Middleware pour lire le JSON
 app.use(express.urlencoded({ extended: true }));
@@ -80,6 +86,11 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/news',newRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/services', serviceRoutes);
+
+// Ensure OPTIONS preflight for assistances endpoints are handled
+app.options('/api/assistances', cors(corsOptions));
+app.options('/api/assistances/:id', cors(corsOptions));
+
 app.use('/api/assistances', assistanceRoutes);
 // news views (enregistrement des vues d'articles)
 app.use('/api/news_views', newsViewsRoute);

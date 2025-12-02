@@ -50,10 +50,23 @@ export const deleteAssistance = (req, res) => {
     });
 };
 
+export const updateAssistance = (req, res) => {
+    const id = req.params.id;
+    const statut = req.body && req.body.statut ? String(req.body.statut) : null;
+    console.debug('[updateAssistance] id=', id, 'body=', req.body);
+    const allowed = new Set(['en_attente','acceptee','en_traitement','terminee','refusee']);
+    if(!statut || !allowed.has(statut)) return res.status(400).json({ message: 'Statut invalide' });
+
+    Assistance.updateStatus(id, statut, (err, results) => {
+        if(err) return res.status(500).json({ message: 'Erreur serveur', error: err });
+        return res.json({ message: 'Statut mis à jour', statut });
+    });
+};
+
 export default {
     createAssistance,
     listAssistances,
     getAssistance,
-    deleteAssistance
+    deleteAssistance,
+    updateAssistance
 };
-

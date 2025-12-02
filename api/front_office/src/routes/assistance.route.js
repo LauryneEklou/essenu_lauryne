@@ -3,7 +3,8 @@ import {
     createAssistance,
     listAssistances,
     getAssistance,
-    deleteAssistance
+    deleteAssistance,
+    updateAssistance
 } from '../controllers/assistance.controller.js';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
@@ -23,5 +24,7 @@ router.get('/:id', verifyToken, checkRole(['super_admin', 'admin_accompagnement'
 // Supprimer une demande
 router.delete('/:id', verifyToken, checkRole(['super_admin', 'admin_accompagnement']), deleteAssistance);
 
-export default router;
+// Mettre à jour une demande (ex: statut) - seulement admins d'accompagnement et super_admin
+router.patch('/:id', verifyToken, checkRole(['super_admin', 'admin_accompagnement']), updateAssistance);
 
+export default router;
