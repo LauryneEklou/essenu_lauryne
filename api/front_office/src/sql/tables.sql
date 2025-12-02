@@ -135,3 +135,10 @@ CREATE INDEX idx_services_name ON services(name);
 
 CREATE INDEX idx_assistance_email ON assistance_requests(email);
 CREATE INDEX idx_assistance_status_created ON assistance_requests(created_at);
+
+-- Ajout de la colonne `statut` aux demandes d'accompagnement si elle n'existe pas
+ALTER TABLE assistance_requests
+  ADD COLUMN IF NOT EXISTS statut ENUM('en_attente','acceptee','en_traitement','terminee','refusee') NOT NULL DEFAULT 'en_attente';
+
+-- Index pour recherche par statut
+CREATE INDEX idx_assistance_statut ON assistance_requests(statut);
