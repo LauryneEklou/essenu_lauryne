@@ -9,11 +9,14 @@ import newRoutes from './routes/new.route.js';
 import commentRoutes from './routes/comment.route.js';
 import serviceRoutes from './routes/service.route.js';
 import assistanceRoutes from './routes/assistance.route.js';
+import reponseRoutes from './routes/reponse.route.js';
 import userRoutes from './routes/user.route.js';
 import cors from 'cors'; // <- on ajoute cors ici
 import * as dashboardController from './controllers/dashboard.controller.js';
 import newsletterRoute from './routes/newsletter.route.js';
 import newsViewsRoute from './routes/newsViews.route.js';
+import fs from 'fs';
+import path from 'path';
 
 
 // routes auth
@@ -66,6 +69,16 @@ app.use(cors(corsOptions));
 app.use('/uploads/images', express.static('uploads/images'));
 app.use('/uploads/files', express.static('uploads/files'));
 
+// Ensure pieces_jointes upload directory exists and serve it
+const piecesUploadDir = path.join(process.cwd(), 'uploads', 'pieces_jointes');
+try{
+    if(!fs.existsSync(piecesUploadDir)){
+        fs.mkdirSync(piecesUploadDir, { recursive: true });
+        console.log('[server] Created upload directory', piecesUploadDir);
+    }
+}catch(e){ console.error('[server] Failed to create pieces_jointes upload dir', e); }
+app.use('/uploads/pieces_jointes', express.static(piecesUploadDir));
+
 // Route test racine
 app.get('/', (req, res) => {
     res.send('Bienvenue sur l’API de la plateforme juridique ⚖️');
@@ -92,6 +105,8 @@ app.options('/api/assistances', cors(corsOptions));
 app.options('/api/assistances/:id', cors(corsOptions));
 
 app.use('/api/assistances', assistanceRoutes);
+// mount replies router under assistances (mergeParams in router)
+app.use('/api/assistances/:assistId/reponses', reponseRoutes);
 // news views (enregistrement des vues d'articles)
 app.use('/api/news_views', newsViewsRoute);
 // users endpoints
