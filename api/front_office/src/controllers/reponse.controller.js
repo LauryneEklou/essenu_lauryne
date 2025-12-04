@@ -15,9 +15,26 @@ export const listReponses = (req, res) => {
         const isOwner = user && assist.user_id && String(assist.user_id) === String(user.id);
         if(!isAdmin && !isOwner) return res.status(403).json({ message: 'Accès interdit' });
 
+        // fetch responses and attach attachments for each response
         Reponse.findByAssistance(assistId, (err, results) => {
             if (err) return res.status(500).json({ message: 'Erreur serveur', error: err });
-            return res.json(results);
+            if(!results || results.length === 0) return res.json([]);
+            // For each response, fetch attachments and add `attachments` array
+            const tasks = results.map(row => {
+                return new Promise((resolve, reject) => {
+                    Reponse.findAttachmentsByReponse(row.id, (errA, atts) => {
+                        if(errA) return reject(errA);
+                        row.attachments = (atts || []).map(a => ({ id: a.id, filename: a.filename, file_url: a.file_url, mime_type: a.mime_type, file_size: a.file_size }));
+                        resolve();
+                    });
+                });
+            });
+            Promise.all(tasks).then(() => {
+                return res.json(results);
+            }).catch(errAll => {
+                console.error('Error fetching attachments for responses', errAll);
+                return res.status(500).json({ message: 'Erreur serveur (attachments)', error: errAll });
+            });
         });
     });
 };
@@ -64,7 +81,21 @@ export const createReponse = (req, res) => {
             if(err) return res.status(500).json({ message: 'Erreur création réponse', error: err });
             const reponseId = result.insertId;
 
-            // if files uploaded (multer), save attachments
+            // helper to fetch and return the full created response with attachments
+            const fetchAndReturn = () => {
+                Reponse.findById(reponseId, (errR, rowsR) => {
+                    if(errR) return res.status(500).json({ message: 'Erreur lecture réponse', error: errR });
+                    if(!rowsR || rowsR.length === 0) return res.status(404).json({ message: 'Réponse introuvable après création' });
+                    const row = rowsR[0];
+                    Reponse.findAttachmentsByReponse(reponseId, (errA, atts) => {
+                        if(errA) return res.status(500).json({ message: 'Erreur lecture attachments', error: errA });
+                        row.attachments = (atts || []).map(a => ({ id: a.id, filename: a.filename, file_url: a.file_url, mime_type: a.mime_type, file_size: a.file_size }));
+                        return res.status(201).json({ message: 'Réponse créée', response: row });
+                    });
+                });
+            };
+
+            // if files uploaded (multer), save attachments then return full response
             if(req.files && Array.isArray(req.files) && req.files.length){
                 const tasks = [];
                 req.files.forEach(file => {
@@ -84,13 +115,15 @@ export const createReponse = (req, res) => {
                     }));
                 });
                 Promise.all(tasks).then(ids => {
-                    return res.status(201).json({ message: 'Réponse créée', reponseId, attachments: ids });
+                    // attachments saved, now fetch the created response with attachments
+                    fetchAndReturn();
                 }).catch(err2 => {
                     console.error('attachment save error', err2);
                     return res.status(500).json({ message: 'Erreur sauvegarde pièces jointes', error: err2 });
                 });
             } else {
-                return res.status(201).json({ message: 'Réponse créée', reponseId });
+                // no attachments -> return the created response
+                fetchAndReturn();
             }
         });
     });

@@ -145,38 +145,38 @@ CREATE INDEX idx_assistance_statut ON assistance_requests(statut);
 
 -- ===== Tables pour les réponses / discussion et leurs pièces jointes =====
 
-CREATE TABLE IF NOT EXISTS reponses_assistance (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    assistance_request_id BIGINT NOT NULL,
-    user_id INT NULL,
-    author_name VARCHAR(150) NULL,
-    author_email VARCHAR(255) NULL,
-    role ENUM('visiteur','admin') NOT NULL DEFAULT 'visiteur',
-    content TEXT NOT NULL,
-    parent_id BIGINT NULL,
-    is_internal TINYINT(1) NOT NULL DEFAULT 0,
-    is_read TINYINT(1) NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_reponses_assistance_request FOREIGN KEY (assistance_request_id) REFERENCES assistance_requests(id) ON DELETE CASCADE,
-    CONSTRAINT fk_reponses_assistance_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT fk_reponses_assistance_parent FOREIGN KEY (parent_id) REFERENCES reponses_assistance(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS reponses_assistance (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        assistance_request_id BIGINT NOT NULL,
+        user_id INT NULL,
+        author_name VARCHAR(150) NULL,
+        author_email VARCHAR(255) NULL,
+        role ENUM('visiteur','admin') NOT NULL DEFAULT 'visiteur',
+        content TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_reponses_assistance_request FOREIGN KEY (assistance_request_id) REFERENCES assistance_requests(id) ON DELETE CASCADE,
+        CONSTRAINT fk_reponses_assistance_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+        CONSTRAINT fk_reponses_assistance_parent FOREIGN KEY (parent_id) REFERENCES reponses_assistance(id) ON DELETE SET NULL
+    );
+
+ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX idx_reponses_assistance_request ON reponses_assistance(assistance_request_id, created_at DESC);
 CREATE INDEX idx_reponses_assistance_user ON reponses_assistance(user_id);
 CREATE INDEX idx_reponses_assistance_is_read ON reponses_assistance(assistance_request_id, is_read);
 
-CREATE TABLE IF NOT EXISTS reponse_attachments (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    reponse_id BIGINT NOT NULL,
-    storage VARCHAR(50) DEFAULT 'local',
-    file_url VARCHAR(1024) NOT NULL,
-    filename VARCHAR(255) NULL,
-    mime_type VARCHAR(255) NULL,
-    file_size INT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_reponse_attachments_reponse FOREIGN KEY (reponse_id) REFERENCES reponses_assistance(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE reponse_attachments (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        reponse_id BIGINT NOT NULL,
+        storage VARCHAR(50) DEFAULT 'local',
+        file_url VARCHAR(1024) NOT NULL,
+        filename VARCHAR(255) NULL,
+        mime_type VARCHAR(255) NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_reponse_attachments_reponse FOREIGN KEY (reponse_id) REFERENCES reponses_assistance(id) ON DELETE CASCADE
+    );
+
+ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX idx_reponse_attachments_reponse ON reponse_attachments(reponse_id);
