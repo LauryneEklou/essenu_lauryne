@@ -41,6 +41,11 @@ export const Assistance = {
     delete: (id, callback) => {
         const sql = `DELETE FROM assistance_requests WHERE id = ?`;
         connection.query(sql, [id], callback);
+    },
+
+    findByUser: (userId, callback) => {
+        const sql = `SELECT ar.*, s.name as service_name FROM assistance_requests ar LEFT JOIN services s ON ar.service_id = s.id WHERE ar.user_id = ? ORDER BY ar.created_at DESC`;
+        connection.query(sql, [userId], callback);
     }
 };
 

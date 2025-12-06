@@ -4,7 +4,8 @@ import {
     listAssistances,
     getAssistance,
     deleteAssistance,
-    updateAssistance
+    updateAssistance,
+    listByUser
 } from '../controllers/assistance.controller.js';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
@@ -14,6 +15,9 @@ const router = express.Router();
 
 // Poster une demande d'accompagnement (public)
 router.post('/', createAssistance);
+
+// Récupérer les demandes du user authentifié
+router.get('/me', verifyToken, listByUser);
 
 // Lister les demandes - seulement admins d'accompagnement et super_admin
 router.get('/', verifyToken, checkRole(['super_admin', 'admin_accompagnement']), listAssistances);

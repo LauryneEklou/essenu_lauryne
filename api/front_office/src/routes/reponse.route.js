@@ -53,13 +53,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB
 
 // List replies for an assistance request
-router.get('/', authOrSkip, roleOrSkip(['super_admin','admin_accompagnement']), listReponses);
+router.get('/', authOrSkip, listReponses);
 
 // Create reply (admin or owner) with optional attachments
 router.post('/', authOrSkip, upload.array('attachments', 5), createReponse);
 
 // Get attachment (stream)
-router.get('/attachments/:attId', authOrSkip, roleOrSkip(['super_admin','admin_accompagnement']), getAttachment);
+router.get('/attachments/:attId', authOrSkip, getAttachment);
 
 // Mark a response as read (PATCH) - admin or owner
 router.patch('/:reponseId/read', authOrSkip, roleOrSkip(['super_admin','admin_accompagnement']), (req, res, next) => {

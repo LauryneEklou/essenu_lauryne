@@ -33,6 +33,20 @@ export const listAssistances = (req, res) => {
     });
 };
 
+// NEW: lister les demandes pour l'utilisateur courant (exige verifyToken middleware)
+export const listByUser = (req, res) => {
+    try{
+        const userId = req.user && req.user.id;
+        if(!userId) return res.status(401).json({ message: 'Utilisateur non authentifié' });
+        Assistance.findByUser(userId, (err, results) => {
+            if(err) return res.status(500).json({ message: 'Erreur serveur', error: err });
+            return res.json(Array.isArray(results) ? results : []);
+        });
+    }catch(e){
+        return res.status(500).json({ message: 'Erreur serveur', error: e && e.message });
+    }
+};
+
 export const getAssistance = (req, res) => {
     const id = req.params.id;
     Assistance.findById(id, (err, results) => {
@@ -68,5 +82,6 @@ export default {
     listAssistances,
     getAssistance,
     deleteAssistance,
-    updateAssistance
+    updateAssistance,
+    listByUser
 };
