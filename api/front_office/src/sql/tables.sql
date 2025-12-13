@@ -38,7 +38,6 @@ CREATE TABLE categories (
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     );
-
     ALTER TABLE documents
         ADD COLUMN nb_download INT NOT NULL DEFAULT 0;
 
