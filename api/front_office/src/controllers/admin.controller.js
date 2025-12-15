@@ -40,7 +40,7 @@ export const addAdmin = (req, res) => {
 
     const hashedPassword = bcrypt.hashSync(password, 10);
 
-    createAdmin({ first_name, last_name, email, password: hashedPassword, role }, (err) => {
+    createAdmin({ first_name, last_name, email, password: hashedPassword, role, must_change_password: 1 }, (err) => {
         if (err) {
             console.error('[addAdmin] DB error full:', err);
             // If duplicate email detected, return 409 Conflict
@@ -92,6 +92,8 @@ export const updateAdmin = (req, res) => {
     if (password) {
         const hashed = bcrypt.hashSync(password, 10);
         updatePayload.password = hashed;
+        // When a super-admin sets the password for another admin, force them to change it on first login
+        updatePayload.must_change_password = 1;
     }
 
     // appeler modèle

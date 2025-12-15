@@ -16,6 +16,9 @@ CREATE TABLE users (
 
 ALTER TABLE users ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active';
 
+-- Nouveau champ pour forcer le changement de mot de passe au premier accès
+ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0;
+
 CREATE TABLE categories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,

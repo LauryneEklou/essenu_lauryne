@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import env from '../../../../content_manager_client/config.js';
+import { findUserById } from '../models/user.model.js';
 
 
 // Vérifie le token JWT pour les routes API
@@ -38,8 +39,37 @@ export function verifyToken(req, res, next) {
         if (!secret) return res.status(500).json({ message: 'JWT secret not configured' });
 
         const decoded = jwt.verify(token, secret);
-        req.user = decoded;
-        next();
+        // Charger l'utilisateur depuis la DB afin d'avoir le flag must_change_password à jour
+        findUserById(decoded.id, (err, results) => {
+            if (err) {
+                console.error('[verifyToken] findUserById error', err);
+                const acceptsJSON = req.headers && req.headers.accept && req.headers.accept.includes('application/json');
+                if (acceptsJSON) return res.status(500).json({ message: 'Erreur serveur' });
+                return res.redirect(`/${req.lang || env.default_language}/auth`);
+            }
+            if (!results || results.length === 0) {
+                const acceptsJSON = req.headers && req.headers.accept && req.headers.accept.includes('application/json');
+                if (acceptsJSON) return res.status(404).json({ message: 'Utilisateur introuvable' });
+                return res.redirect(`/${req.lang || env.default_language}/auth`);
+            }
+            const user = results[0];
+            // Si l'utilisateur doit changer son mot de passe, bloquer l'accès à toutes les routes sauf /api/auth/change-password
+            const path = req.originalUrl || req.url || '';
+            if (user.must_change_password) {
+                // autoriser la route de changement de mot de passe
+                if (path.startsWith('/api/auth/change-password') || path.startsWith('/api/auth/login') || path.startsWith('/api/auth/logout') || path.startsWith('/api/auth/me')) {
+                    // Allow login/me/logout/change-password endpoints
+                } else {
+                    const acceptsJSON = req.headers && req.headers.accept && req.headers.accept.includes('application/json');
+                    if (acceptsJSON) return res.status(403).json({ message: 'Veuillez changer votre mot de passe avant d\'accéder à l\'application' });
+                    return res.redirect(`/${req.lang || env.default_language}/auth`);
+                }
+            }
+
+            // Attacher les informations décodées et complètes
+            req.user = Object.assign({}, decoded, { db: user });
+            next();
+        });
     } catch (err) {
         console.error('Auth verify failed:', err && err.message);
         const acceptsJSON = req.headers && req.headers.accept && req.headers.accept.includes('application/json');

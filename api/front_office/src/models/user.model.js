@@ -2,12 +2,12 @@ import connection from "../config/db.js";
 import { v4 as uuidv4 } from "uuid";
 
 export const createUser = (userData, callback) => {
-    const { first_name, last_name, email, password, role } = userData;
+    const { first_name, last_name, email, password, role, must_change_password = 0 } = userData;
     const uuid = uuidv4();
 
-    const sql = `INSERT INTO users (uuid, first_name, last_name, email, password, role)
-               VALUES (?, ?, ?, ?, ?, ?)`;
-    connection.query(sql, [uuid, first_name, last_name, email, password, role], callback);
+    const sql = `INSERT INTO users (uuid, first_name, last_name, email, password, role, must_change_password)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    connection.query(sql, [uuid, first_name, last_name, email, password, role, must_change_password], callback);
 };
 
 export const findUserByEmail = (email, callback) => {
@@ -46,8 +46,11 @@ export const createAdmin = (adminData, callback) => {
 
         // generate uuid like createUser does
         const uuid = uuidv4();
-        const sql = "INSERT INTO users (uuid, first_name, last_name, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?, 'active')";
-        connection.query(sql, [uuid, adminData.first_name, adminData.last_name, adminData.email, adminData.password, adminData.role], callback);
+        // allow caller to specify must_change_password; default to 1 for admins
+        const mustChange = (typeof adminData.must_change_password !== 'undefined') ? adminData.must_change_password : 1;
+        const status = adminData.status || 'active';
+        const sql = "INSERT INTO users (uuid, first_name, last_name, email, password, role, status, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        connection.query(sql, [uuid, adminData.first_name, adminData.last_name, adminData.email, adminData.password, adminData.role, status, mustChange], callback);
     });
 };
 
@@ -84,11 +87,20 @@ export const updateAdmin = (id, payload, callback) => {
     if(payload.email !== undefined){ fields.push('email = ?'); values.push(payload.email); }
     if(payload.role !== undefined){ fields.push('role = ?'); values.push(payload.role); }
     if(payload.password !== undefined){ fields.push('password = ?'); values.push(payload.password); }
+    // allow updating must_change_password explicitly
+    if(payload.must_change_password !== undefined){ fields.push('must_change_password = ?'); values.push(payload.must_change_password); }
     if(fields.length === 0) return callback(null);
     const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
     values.push(id);
     connection.query(sql, values, callback);
 };
+
+// Mettre à jour le mot de passe et réinitialiser le flag must_change_password
+export const updatePasswordAndClearFlag = (id, newHashedPassword, callback) => {
+    const sql = "UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?";
+    connection.query(sql, [newHashedPassword, id], callback);
+};
+
 const Users = {
     createUser,
     findUserByEmail,
@@ -98,6 +110,7 @@ const Users = {
     createAdmin,
     toggleAdminStatus,
     deleteAdmin,
-    updateAdmin
+    updateAdmin,
+    updatePasswordAndClearFlag
 };
 export default Users;
