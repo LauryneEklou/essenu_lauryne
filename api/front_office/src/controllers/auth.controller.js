@@ -168,7 +168,14 @@ export const changePassword = (req, res) => {
                 return res.status(500).json({ message: 'Erreur serveur lors de la mise à jour du mot de passe' });
             }
             console.debug('[auth.changePassword] update success', { userId });
-            return res.json({ message: 'Mot de passe modifié avec succès' });
+            // Retourner les informations de l'utilisateur pour redirection côté client
+            return res.json({
+                message: 'Mot de passe modifié avec succès',
+                id: user.id,
+                role: user.role,
+                first_name: user.first_name,
+                email: user.email
+            });
         });
     });
 };
