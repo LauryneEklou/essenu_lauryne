@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - EditorJS Renderer with Article Featured</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .demo-header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .demo-header h1 {
+            margin: 0 0 10px 0;
+        }
+        .demo-header p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+        .article-featured {
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .article-title {
+            font-size: 2em;
+            margin-bottom: 0.5em;
+            color: #2c3e50;
+        }
+        .article-meta {
+            color: #7f8c8d;
+            margin-bottom: 1.5em;
+            font-size: 0.9em;
+        }
+        .article-meta > * {
+            margin-right: 15px;
+        }
+        .article-category {
+            background: #3498db;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-size: 0.85em;
+        }
+        .article-content {
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+        .article-content h1, .article-content h2, .article-content h3 {
+            color: #2c3e50;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        .article-content p {
+            margin-bottom: 1em;
+        }
+        .status-indicator {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .status-indicator.success {
+            border-left-color: #27ae60;
+        }
+        .status-indicator.error {
+            border-left-color: #e74c3c;
+        }
+        .status-indicator code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-header">
+        <h1>🔧 EditorJS Renderer Demo</h1>
+        <p><strong>Issue Fixed:</strong> editorjs-renderer.js n'agit pas sur +article-featured</p>
+        <p><strong>Solution:</strong> Proper DOM selector matching between Pug mixin and JavaScript</p>
+    </div>
+
+    <div id="status" class="status-indicator">
+        <strong>Status:</strong> <span id="status-text">Checking...</span>
+    </div>
+
+    <!-- This simulates the output of the +article-featured mixin -->
+    <article class="article-featured" data-article-id="123">
+        <div class="article-header">
+            <h1 class="article-title">Understanding French Labor Law</h1>
+            <div class="article-meta">
+                <span class="article-category">Legal</span>
+                <time class="article-date">2025-01-15</time>
+                <span class="article-author">by Marie Dupont</span>
+            </div>
+        </div>
+
+        <!-- CRITICAL: This div has the .editorjs-output class that the renderer targets -->
+        <div class="article-content editorjs-output">
+            <!-- This HTML would come from the backend's renderEditorJsToHtml() function -->
+            <h2>Introduction to Labor Rights</h2>
+            <p>French labor law is one of the most comprehensive in Europe, providing extensive protections for workers. This guide covers the fundamental aspects every employee should understand.</p>
+            
+            <h3>Key Points to Remember</h3>
+            <ul>
+                <li>Every employee has the right to a written contract</li>
+                <li>The standard work week is 35 hours</li>
+                <li>Minimum wage (SMIC) is adjusted annually</li>
+                <li>Paid vacation is guaranteed at 5 weeks per year</li>
+            </ul>
+
+            <blockquote>
+                "Workers' rights are fundamental human rights that must be protected and respected."
+                <footer>— International Labour Organization</footer>
+            </blockquote>
+
+            <h3>Types of Employment Contracts</h3>
+            <p>There are several types of employment contracts in France:</p>
+            <ol>
+                <li>CDI (Contrat à Durée Indéterminée) - Permanent contract</li>
+                <li>CDD (Contrat à Durée Déterminée) - Fixed-term contract</li>
+                <li>Interim (Contrat de Travail Temporaire) - Temporary work</li>
+            </ol>
+
+            <h3>Example Calculation</h3>
+            <pre>
+// Monthly salary calculation
+const hourlyRate = 11.65; // SMIC 2025
+const hoursPerWeek = 35;
+const weeksPerMonth = 52 / 12;
+
+const monthlySalary = hourlyRate * hoursPerWeek * weeksPerMonth;
+console.log(`Monthly SMIC: €${monthlySalary.toFixed(2)}`);
+            </pre>
+
+            <p>For more information, consult with a labor law specialist or visit the official government website.</p>
+        </div>
+    </article>
+
+    <!-- Second article to demonstrate multiple containers support -->
+    <article class="article-featured" data-article-id="124">
+        <div class="article-header">
+            <h1 class="article-title">Quick Reference: Employee Rights</h1>
+            <div class="article-meta">
+                <span class="article-category">Reference</span>
+                <time class="article-date">2025-01-16</time>
+            </div>
+        </div>
+
+        <div class="article-content editorjs-output">
+            <h2>Essential Rights at a Glance</h2>
+            <p>This quick reference guide summarizes key employee rights in France.</p>
+            
+            <ul>
+                <li>Right to safe working conditions</li>
+                <li>Right to fair compensation</li>
+                <li>Right to join a union</li>
+                <li>Protection against discrimination</li>
+            </ul>
+
+            <blockquote>
+                "Know your rights, exercise them responsibly."
+            </blockquote>
+        </div>
+    </article>
+
+    <!-- Include the EditorJS renderer script -->
+    <script src="assets/js/editorjs-renderer.js"></script>
+
+    <!-- Status checker script -->
+    <script>
+        // Wait a moment for the renderer to finish
+        setTimeout(function() {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            
+            // Check if content was enhanced
+            const enhancedContainers = document.querySelectorAll('.editorjs-output[data-enhanced="true"]');
+            
+            if (enhancedContainers.length > 0) {
+                statusDiv.classList.add('success');
+                statusText.innerHTML = `✅ <strong>SUCCESS!</strong> Found ${enhancedContainers.length} enhanced EditorJS container(s). The renderer is working correctly with the +article-featured mixin output.`;
+                
+                // Show what was enhanced
+                console.log('%c✅ EditorJS Renderer Working!', 'color: green; font-size: 16px; font-weight: bold');
+                console.log(`Found ${enhancedContainers.length} enhanced containers:`);
+                enhancedContainers.forEach((container, i) => {
+                    console.log(`  ${i + 1}. Container has class 'editorjs-enhanced': ${container.classList.contains('editorjs-enhanced')}`);
+                    console.log(`     - Images: ${container.querySelectorAll('img').length}`);
+                    console.log(`     - Lists: ${container.querySelectorAll('ul, ol').length}`);
+                    console.log(`     - Blockquotes: ${container.querySelectorAll('blockquote').length}`);
+                    console.log(`     - Code blocks: ${container.querySelectorAll('pre').length}`);
+                });
+            } else {
+                statusDiv.classList.add('error');
+                statusText.innerHTML = '❌ <strong>ERROR:</strong> EditorJS renderer did not enhance the content. Check console for errors.';
+                console.error('❌ EditorJS renderer did not work');
+            }
+        }, 500);
+    </script>
+</body>
+</html>

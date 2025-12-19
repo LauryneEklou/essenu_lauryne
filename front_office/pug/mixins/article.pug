@@ -1,0 +1,32 @@
+//- Mixin for rendering a featured article
+//- The article content should already be HTML from the backend (EditorJS converted to HTML)
+//- This mixin renders it and marks it for client-side enhancement
+
+mixin article-featured(article)
+  article.article-featured(data-article-id=article.id)
+    .article-header
+      if article.image_url
+        .article-image
+          img(src=article.image_url alt=article.title)
+      h1.article-title= article.title
+      .article-meta
+        if article.category
+          span.article-category= article.category
+        if article.published_at
+          time.article-date(datetime=article.published_at)= article.published_at
+        if article.author
+          span.article-author by #{article.author}
+    
+    .article-content.editorjs-output
+      //- The description comes from backend as HTML (already converted from EditorJS JSON)
+      //- We use !{} to output unescaped HTML
+      if article.description
+        != article.description
+      else
+        p No content available.
+    
+    .article-footer
+      //- Comments, share buttons, etc. could go here
+      if article.comments_count
+        .article-comments-count
+          span #{article.comments_count} comment(s)
